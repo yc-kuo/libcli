@@ -427,15 +427,33 @@ struct cli_command *cli_register_command_core(struct cli_def *cli, struct cli_co
   }
 
   /*
-   * If we have a chain (p is not null), run down to the last element and place this command at the end
+   * If we have a chain (p is not null), go through the chain and place/insert the command at a proper
+   * position after command name comparing (sorting)
    */
-  for (; p && p->next; p = p->next)
-    ;
+  for (; p; p = p->next) {
+    if (strcmp(c->command, p->command) < 0) {
+      if (!p->previous) {
+        if (parent) {
+          parent->children = c;
+        } else {
+          cli->commands = c;
+        }
+      } else {
+        c->previous = p->previous;
+        p->previous->next = c;
+      }
+      c->next = p;
+      p->previous = c;
 
-  if (p) {
-    p->next = c;
-    c->previous = p;
+      break;
+    } else if (!p->next) {
+      p->next = c;
+      c->previous = p;
+
+      break;
+    }
   }
+
   return c;
 }
 
