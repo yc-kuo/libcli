@@ -225,6 +225,24 @@ char *cli_int_command_name(struct cli_def *cli, struct cli_command *command) {
   return name;
 }
 
+struct cli_command *cli_command_lookup(struct cli_def *cli, struct cli_command *parent, const char *command) {
+  /*
+   * Directly return the command node once the same node's name exist by
+   * walking through the command chain
+   */
+  struct cli_command *c = NULL;
+
+  if (cli || parent) {
+    for (c = (parent ? parent->children : cli->commands); c; c = c->next) {
+      if (strcmp(c->command, command) == 0) {
+        break;
+      }
+    }
+  }
+
+  return c;
+}
+
 char *cli_command_name(struct cli_def *cli, struct cli_command *command) {
   return command->full_command_name;
 }
@@ -427,6 +445,10 @@ struct cli_command *cli_register_command(struct cli_def *cli, struct cli_command
   struct cli_command *c;
 
   if (!command) return NULL;
+  if ((c = cli_command_lookup(cli, parent, command))) {
+    return c;
+  }
+
   if (!(c = calloc(sizeof(struct cli_command), 1))) return NULL;
   c->command_type = CLI_REGULAR_COMMAND;
   c->callback = callback;
@@ -2505,8 +2527,11 @@ struct cli_command *cli_int_register_buildmode_command(struct cli_def *cli, stru
   struct cli_command *c;
 
   if (!command) return NULL;
-  if (!(c = calloc(sizeof(struct cli_command), 1))) return NULL;
+  if ((c = cli_command_lookup(cli, parent, command))) {
+    return c;
+  }
 
+  if (!(c = calloc(sizeof(struct cli_command), 1))) return NULL;
   c->flags = flags;
   c->callback = callback;
   c->next = NULL;
